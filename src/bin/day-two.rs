@@ -9,7 +9,9 @@ fn help() {
   println!(
     "usage:
 day-two <file-path>
-  return frequency for input file"
+  return frequency for input file
+day-two <cmd> <file-path>
+  prototype: return the letters in common between the prototype boxes"
   )
 }
 
@@ -21,6 +23,15 @@ fn main() {
     2 => {
       let input = read_input(&args[1]);
       println!("Checksum: {}", calc_checksum(&input))
+    }
+    3 => {
+      let cmd = &args[1];
+      let input = read_input(&args[2]);
+
+      match &cmd[..] {
+        "prototype" => println!("Prototype: {}", calc_prototype(&input)),
+        _ => help(),
+      }
     }
     _ => help(),
   }
@@ -73,6 +84,38 @@ fn calc_line(sums: &Sums, line: &str) -> Sums {
   )
 }
 
+fn calc_prototype(inputs: &str) -> String {
+  let lines = inputs.lines().map(|l| l.trim());
+
+  lines
+    .clone()
+    .find_map(|l| {
+      lines.clone().find_map(|l2| {
+        let inter = string_intersection(l, l2).clone();
+
+        if l.len() - 1 == inter.len() {
+          Some(inter)
+        } else {
+          None
+        }
+      })
+    }).unwrap()
+}
+
+fn string_intersection(l1: &str, l2: &str) -> String {
+  l1.chars()
+    .zip(l2.chars())
+    .filter_map(
+      |(first, second)| {
+        if first == second {
+          Some(first)
+        } else {
+          None
+        }
+      },
+    ).collect()
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -89,5 +132,19 @@ mod tests {
       ababab",
     );
     assert_eq!(checksum, 12);
+  }
+
+  #[test]
+  fn test_calc_prototype() {
+    let proto = calc_prototype(
+      "abcde
+      fghij
+      klmno
+      pqrst
+      fguij
+      axcye
+      wvxyz",
+    );
+    assert_eq!(proto, "fgij");
   }
 }

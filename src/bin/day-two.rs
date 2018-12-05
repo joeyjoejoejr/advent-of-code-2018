@@ -71,12 +71,12 @@ fn calc_line(sums: &Sums, line: &str) -> Sums {
   }
 
   Sums(
-    if counts.iter().any(|(_, val)| *val == 2) {
+    if counts.iter().any(|(_, &val)| val == 2) {
       sums.0 + 1
     } else {
       sums.0
     },
-    if counts.iter().any(|(_, val)| *val == 3) {
+    if counts.iter().any(|(_, &val)| val == 3) {
       sums.1 + 1
     } else {
       sums.1

@@ -1,78 +1,55 @@
-use std::collections::HashSet;
-use std::env;
-use std::error::Error;
-use std::fs::File;
-use std::io::prelude::Read;
-use std::path::Path;
+extern crate clap;
+use clap::{App, Arg};
 
-fn help() {
-  println!(
-    "usage:
-day-one <file-path>
-  return frequency for input file
-day-one <cmd> <file-path>
-  calibrate: find the first value that is reached twice"
-  )
-}
+use std::collections::HashSet;
+use std::fs::read_to_string;
 
 fn main() {
-  let args: Vec<String> = env::args().collect();
+  let matches = App::new("Day One")
+    .version("0.1")
+    .arg(
+      Arg::with_name("calibrate")
+        .help("flag to calibrate")
+        .short("c")
+        .long("calibrate"),
+    ).arg(Arg::with_name("INPUT").help("Input file").required(true))
+    .get_matches();
 
-  match args.len() {
-    1 => help(),
-    2 => {
-      let input = read_input(&args[1]);
-      println!("Frequency: {}", calc_frequency(&input))
-    }
-    3 => {
-      let cmd = &args[1];
-      let input = read_input(&args[2]);
+  let input = read_to_string(matches.value_of("INPUT").unwrap()).expect("Error reading file");
+  let parsed_input = parse_input(&input).expect("Error parsing file");
 
-      match &cmd[..] {
-        "calibrate" => println!("Calibration: {}", calc_calibration(&input)),
-        _ => help(),
-      }
-    }
-    _ => help(),
+  if matches.is_present("calibrate") {
+    println!(
+      "{}",
+      calc_calibration(&parsed_input).expect("Can't calculate calibration")
+    );
+  } else {
+    println!("{}", calc_frequency(&parsed_input));
   }
 }
 
-fn read_input(path: &str) -> String {
-  let path = Path::new(&path);
-  let display = path.display();
-
-  let mut file = match File::open(&path) {
-    Err(why) => panic!("couldn't open {}: {}", display, why.description()),
-    Ok(file) => file,
-  };
-
-  let mut s = String::new();
-  match file.read_to_string(&mut s) {
-    Err(why) => panic!("couldn't read {}: {}", display, why.description()),
-    Ok(_) => s,
-  }
+fn parse_input(input: &str) -> Result<Vec<i32>, std::num::ParseIntError> {
+  input
+    .lines()
+    .map(|line| line.trim().parse::<i32>())
+    .collect()
 }
 
-fn calc_frequency(input: &str) -> String {
-  let mut frequency = 0;
-  for line in input.lines() {
-    let number: i32 = line.trim().parse().unwrap();
-    frequency += number;
-  }
-  frequency.to_string()
+fn calc_frequency(input: &[i32]) -> i32 {
+  input.iter().sum()
 }
 
-fn calc_calibration(input: &str) -> String {
-  let mut lines = input.lines().cycle();
+fn calc_calibration(input: &[i32]) -> Option<i32> {
+  let mut items = input.iter().cycle();
   let mut values = HashSet::new();
   let mut frequency = 0;
   values.insert(frequency);
 
   loop {
-    let number: i32 = lines.next().unwrap().trim().parse().unwrap();
+    let number: &i32 = items.next()?;
     frequency += number;
     if values.contains(&frequency) {
-      break frequency.to_string();
+      break Some(frequency);
     }
     values.insert(frequency);
   }
@@ -84,42 +61,28 @@ mod tests {
 
   #[test]
   fn test_add_a_number() {
-    let frequency = calc_frequency("+1");
-    assert_eq!(frequency, "1")
+    let frequency = calc_frequency(&[1]);
+    assert_eq!(frequency, 1)
   }
 
   #[test]
   fn test_subtract_a_number() {
-    let frequency = calc_frequency("-1");
-    assert_eq!(frequency, "-1")
+    let frequency = calc_frequency(&[-1]);
+    assert_eq!(frequency, -1)
   }
 
   #[test]
   fn test_multiple_numbers() {
-    let frequency = calc_frequency(
-      "+15
-      +1
-      +1
-      -2",
-    );
-    assert_eq!(frequency, "15")
+    let frequency = calc_frequency(&[15, 1, 1, 2]);
+    assert_eq!(frequency, 15)
   }
 
   #[test]
   fn test_calibation() {
-    let calibration = calc_calibration(
-      "+1
-       -1",
-    );
-    let calibration2 = calc_calibration(
-      "+7
-      +7
-      -2
-      -7
-      -4",
-    );
+    let calibration = calc_calibration(&[1, -1]);
+    let calibration2 = calc_calibration(&[7, 7, -2, -7, -4]);
 
-    assert_eq!(calibration, "0");
-    assert_eq!(calibration2, "14");
+    assert_eq!(calibration.unwrap(), 0);
+    assert_eq!(calibration2.unwrap(), 14);
   }
 }

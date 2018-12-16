@@ -1,55 +1,30 @@
-use std::collections::HashMap;
-use std::env;
-use std::error::Error;
-use std::fs::File;
-use std::io::prelude::Read;
-use std::path::Path;
+extern crate structopt;
 
-fn help() {
-  println!(
-    "usage:
-day-two <file-path>
-  return frequency for input file
-day-two <cmd> <file-path>
-  prototype: return the letters in common between the prototype boxes"
-  )
+use std::collections::HashMap;
+use std::fs::read_to_string;
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "day-two")]
+struct Opt {
+  #[structopt(short = "p", long = "prototype")]
+  prototype: bool,
+
+  #[structopt(name = "FILE")]
+  file: String,
 }
 
 fn main() {
-  let args: Vec<String> = env::args().collect();
+  let opt = Opt::from_args();
 
-  match args.len() {
-    1 => help(),
-    2 => {
-      let input = read_input(&args[1]);
-      println!("Checksum: {}", calc_checksum(&input))
-    }
-    3 => {
-      let cmd = &args[1];
-      let input = read_input(&args[2]);
-
-      match &cmd[..] {
-        "prototype" => println!("Prototype: {}", calc_prototype(&input)),
-        _ => help(),
-      }
-    }
-    _ => help(),
-  }
-}
-
-fn read_input(path: &str) -> String {
-  let path = Path::new(&path);
-  let display = path.display();
-
-  let mut file = match File::open(&path) {
-    Err(why) => panic!("couldn't open {}: {}", display, why.description()),
-    Ok(file) => file,
-  };
-
-  let mut s = String::new();
-  match file.read_to_string(&mut s) {
-    Err(why) => panic!("couldn't read {}: {}", display, why.description()),
-    Ok(_) => s,
+  let input = read_to_string(opt.file).expect("Error reading file");
+  if opt.prototype {
+    println!(
+      "Prototype: {}",
+      calc_prototype(&input).expect("Can't find prototype")
+    );
+  } else {
+    println!("Checksum: {}", calc_checksum(&input));
   }
 }
 
@@ -84,22 +59,20 @@ fn calc_line(sums: &Sums, line: &str) -> Sums {
   )
 }
 
-fn calc_prototype(inputs: &str) -> String {
+fn calc_prototype(inputs: &str) -> Option<String> {
   let lines = inputs.lines().map(|l| l.trim());
 
-  lines
-    .clone()
-    .find_map(|l| {
-      lines.clone().find_map(|l2| {
-        let inter = string_intersection(l, l2).clone();
+  lines.clone().find_map(|l| {
+    lines.clone().find_map(|l2| {
+      let inter = string_intersection(l, l2).clone();
 
-        if l.len() - 1 == inter.len() {
-          Some(inter)
-        } else {
-          None
-        }
-      })
-    }).unwrap()
+      if l.len() - 1 == inter.len() {
+        Some(inter)
+      } else {
+        None
+      }
+    })
+  })
 }
 
 fn string_intersection(l1: &str, l2: &str) -> String {
@@ -144,7 +117,7 @@ mod tests {
       fguij
       axcye
       wvxyz",
-    );
+    ).unwrap();
     assert_eq!(proto, "fgij");
   }
 }
